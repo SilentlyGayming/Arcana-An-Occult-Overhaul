@@ -193,9 +193,10 @@ namespace SupernaturalExpanded.Journal
                     data.RankTitle = JournalText.Format("Arcana.Journal.Overview.Rank.Header", rank);
                     data.RankLevel = 1;
                 }
-                else if (OccultRankLabel.HasLadder(identity.Occults))
+                else if (OccultRankLabel.FirstRank(context.Primary).Length != 0)
                 {
-                    data.RankTitle = JournalText.Get("Arcana.Journal.Overview.Rank.Unavailable");
+                    data.RankTitle = JournalText.Format("Arcana.Journal.Overview.Rank.Header", OccultRankLabel.FirstRank(context.Primary));
+                    data.RankDescription = OccultRankLabel.FirstRankDescription(context.Primary, identity.FirstName);
                 }
                 else
                 {

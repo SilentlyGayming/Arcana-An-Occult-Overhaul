@@ -137,10 +137,34 @@ namespace SupernaturalExpanded.Journal
 
     internal static class OccultRankLabel
     {
-        internal static bool HasLadder(OccultTypes types)
+        internal static string FirstRankKey(OccultTypes primary)
         {
-            OccultTypes primary = OccultAssetData.Primary(types);
-            return primary == OccultTypes.Witch || primary == OccultTypes.Genie;
+            switch (primary)
+            {
+                case OccultTypes.Witch: return "Uninitiated";
+                case OccultTypes.Genie: return "Dormant";
+                case OccultTypes.Fairy: return "Budding";
+                default: return null;
+            }
+        }
+
+        internal static string FirstRank(OccultTypes primary)
+        {
+            string key = FirstRankKey(primary);
+            return key == null ? "" : JournalText.Get("Arcana." + LifeStateKey(primary) + ".Rank.Full." + key);
+        }
+
+        internal static string FirstRankDescription(OccultTypes primary, string firstName)
+        {
+            string key = FirstRankKey(primary);
+            if (key == null) return "";
+            string name = string.IsNullOrEmpty(firstName) ? JournalText.Get("Arcana.Common.ThisSim") : firstName;
+            return JournalText.Get("Arcana." + LifeStateKey(primary) + ".Rank.Description." + key).Replace("{Name}", name);
+        }
+
+        private static string LifeStateKey(OccultTypes primary)
+        {
+            return primary == OccultTypes.Witch ? "Witch" : primary == OccultTypes.Genie ? "Genie" : "Fairy";
         }
 
         internal static string Rank(SimIdentity identity, PowerSelection witchProgress)
@@ -162,6 +186,7 @@ namespace SupernaturalExpanded.Journal
         {
             OccultTypes primary = OccultAssetData.Primary(identity.Occults);
             string rank = Rank(identity, witchProgress);
+            if (rank.Length == 0) rank = FirstRank(primary);
             string lifeState = LifeStateNames.For(primary);
             return rank.Length == 0 ? lifeState : JournalText.Format("Arcana.Common.WithQualifier", lifeState, rank);
         }

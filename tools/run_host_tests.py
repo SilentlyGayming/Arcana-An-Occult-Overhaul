@@ -144,21 +144,35 @@ def weather_stone(host):
                               cs_source.file_path(ROOT, 'SpellCatalog')])
 
 
+def weather_stone_cheat(host):
+    stone = cs_source.class_text(ROOT, 'StoneAccess')
+    methods = method_text(stone, 'internal static bool TryWeather(Sim actor, out WeatherStone.SummonWeatherType kind, out string weather)')
+    methods += method_text(stone, 'internal static bool ActivateSelectedWeather(WeatherStone stone, Sim actor, out string weather, out string reason)')
+    begin = method_text(cs_source.class_text(ROOT, 'GenieRain'), 'internal static void Begin(WeatherStone stone, Sim genie)')
+    support = wrap(host.folder / 'WeatherCheatBridge.cs',
+        'using System; using Sims3.Gameplay.Actors; using Sims3.Gameplay.Objects.Environment; '
+        'using Sims3.Gameplay.Seasons; using Sims3.Gameplay.Utilities; using Sims3.Gameplay.Core; '
+        'using Sims3.Gameplay.EventSystem; using Sims3.SimIFace; using Sims3.SimIFace.Enums; using Sims3.UI.Hud;',
+        cs_source.class_text(ROOT, 'FortuneRainState') + '\npartial class GenieRain {' + begin +
+        '\n private const float WindowHours=12; }\npartial class StoneAccess {' + methods + '}')
+    host.run('WeatherStoneCheat', [cs_source.file_path(ROOT, 'WeatherStoneCheat'), support,
+                                 TESTS / 'WeatherStoneCheatTests.cs'], ())
+
+
 def wish_system(host):
-    costs = method_text(cs_source.class_text(ROOT, 'GenieWishes'), 'internal static float Cost(WishMode mode)')
-    costs += method_text(cs_source.class_text(ROOT, 'GenieWishes'), 'internal static float Cost(WishMode mode, CastingRules rules)')
-    support = wrap(host.folder / 'WishSupport.cs', 'using System; using Sims3.Gameplay.Careers; using Sims3.SimIFace;',
-        '\n'.join(cs_source.class_text(ROOT, name) for name in ('Rank', 'RankState', 'PerkProgression', 'WishRecord'))
-        + '\ninternal static class GenieWishes { ' + costs + ' }'
+    support = wrap(host.folder / 'WishSupport.cs', 'using System; using Sims3.Gameplay.Careers; using Sims3.Gameplay.Utilities; using Sims3.SimIFace;',
+        '\n'.join(cs_source.class_text(ROOT, name) for name in ('Rank', 'RankState', 'PerkProgression', 'WishRecord', 'BlessingRules'))
         + '\ninternal static class WishBuffs {'
         + ' internal static void RestoreTravel(Sims3.Gameplay.Actors.Sim s, float w, int m, float b, float l, ulong t, float j) {}'
-        + ' internal static void CaptureTravel(Sims3.Gameplay.Actors.Sim s, out float w, out int m, out float b, out float l, out ulong t, out float j) { w=b=l=j=0; m=0; t=0; } }')
+        + ' internal static void CaptureTravel(Sims3.Gameplay.Actors.Sim s, out float w, out int m, out float b, out float l, out ulong t, out float j) { w=b=l=j=0; m=0; t=0; } }'
+        + '\ninternal static class OccultAssetData { internal const ulong GenieSkillStatus = 0xF5E71684E4B2C36Aul; internal const ulong GenieLifeStateArt = 0x1F9FE1E94FE3CEFAul; }')
     adapter = host.folder / 'WishAdapterHost.dll'
     host_copy(host.args.assembly.resolve(), adapter)
     memory = host.folder / 'WishMemoryStream.cs'
     shared = (TESTS / 'SpellKnowledgeTests.cs').read_text().split('internal sealed class MemoryStreamData', 1)[1]
     memory.write_text('using System.Collections.Generic; using Sims3.SimIFace; internal sealed class MemoryStreamData' + shared)
-    host.run('WishSystem', [support, memory, cs_source.file_path(ROOT, 'WishCatalog'), cs_source.file_path(ROOT, 'WishEffectSkill')] + rules_sources()
+    host.run('WishSystem', [support, memory, cs_source.file_path(ROOT, 'WishCatalog'), cs_source.file_path(ROOT, 'WishEffectSkill'),
+        cs_source.file_path(ROOT, 'GeniePowerPolicy'), cs_source.file_path(ROOT, 'WishReservation')] + rules_sources()
         + [TESTS / 'WishSystemTests.cs'], extra=(str(adapter),))
 
 
@@ -168,7 +182,7 @@ def wish_menu(host):
     host.run('WishMenu', [TESTS / 'GenieWishMenuTests.cs'], extra=(str(adapter),))
 
 
-SUITES = {'genie-tree': genie_tree, 'spell-knowledge': spell_knowledge, 'casting-rules': casting_rules, 'weather-stone': weather_stone, 'wish-system': wish_system, 'wish-menu': wish_menu}
+SUITES = {'genie-tree': genie_tree, 'spell-knowledge': spell_knowledge, 'casting-rules': casting_rules, 'weather-stone': weather_stone, 'weather-stone-cheat': weather_stone_cheat, 'wish-system': wish_system, 'wish-menu': wish_menu}
 
 
 def main():

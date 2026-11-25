@@ -187,7 +187,7 @@ def build(args):
                 raise ValueError(f"{paths[name]} changed while preparing the build. Run the build again.")
             (ref_dir / name).write_bytes(data)
         generated = (
-            (Path("Occults/OccultAssetData.g.cs"), generate_hud_keys),
+            (Path("Shared/OccultAssetData.g.cs"), generate_hud_keys),
             (Path("Localization/ArcanaEnglish.g.cs"), generate_english),
         )
         for relative_path, generate in generated:

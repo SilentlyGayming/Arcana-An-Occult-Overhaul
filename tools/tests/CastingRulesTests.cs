@@ -623,8 +623,7 @@ namespace SupernaturalExpanded.Journal
             Equal(250f * 1.15f, unbound.Capacity, "Unbound adds 15% power");
             unbound.Wellspring = 3;
             Equal(250f * 1.45f, unbound.Capacity, "Wellspring's third upgrade adds 30% on top of Unbound");
-            Equal(250f * 1.45f * 0.75f, WithExhaustion(unbound).Capacity, "Wish Exhaustion cuts maximum power by 25%");
-            Equal(250f * 1.45f * 0.50f, WithVessel(unbound).Capacity, "The Broken Vessel halves maximum power");
+            Equal(250f * 1.45f, WithExhaustion(unbound).Capacity, "Wish Exhaustion preserves the true maximum");
             Equal(1f * 1.25f, unbound.FizzleDuration, "Unbound lengthens Genie Backlash by 25%; Witch rank reductions do not apply");
             Equal(1.1f, unbound.AbilityCostFactor, "Unbound raises ability costs by 10%");
             Equal(0.75f, unbound.CostFactors(TierTwo).Innate, "Unbound retains the 25% Ancient Sorcery discount");
@@ -636,6 +635,17 @@ namespace SupernaturalExpanded.Journal
             Equal(1f + 0.25f + 0.25f, unbound.GenieRegeneration, "Rising Tide stops at five stacks and Pocket Palace adds 25% at home");
             unbound.Exhausted = true;
             Equal(0.5f * 1.5f, unbound.GenieRegeneration, "Wish Exhaustion halves regeneration");
+            CastingRules retreat = new CastingRules(Rank.Adept, CasterKind.Genie);
+            retreat.InLamp = true;
+            retreat.AtHomeLamp = true;
+            retreat.FortuneRain = true;
+            retreat.Nights = 2;
+            Equal(1.85f, retreat.GenieRegeneration, "Lamp recovery stacks with Pocket Palace and weather");
+            Equal(1.85f * 1.2f, retreat.RegenerationFactors(true, false, false).Rate, "Lamp recovery counts as sleep for perks");
+            retreat.Exhausted = true;
+            Equal(1.85f * 1.2f * .5f, retreat.RegenerationFactors(true, false, false).Rate, "Lamp recovery respects exhaustion");
+            retreat.FateSealed = true;
+            Equal(0f, retreat.RegenerationFactors(true, false, false).Rate, "Chains overrides recovery with all bonuses active");
             unbound.Exhausted = false;
             unbound.RisingTide = false;
             Equal(1.25f, unbound.GenieRegeneration, "streaks do nothing without Rising Tide");
@@ -683,13 +693,6 @@ namespace SupernaturalExpanded.Journal
         {
             CastingRules copy = source;
             copy.Exhausted = true;
-            return copy;
-        }
-
-        private static CastingRules WithVessel(CastingRules source)
-        {
-            CastingRules copy = source;
-            copy.Vessel = true;
             return copy;
         }
 

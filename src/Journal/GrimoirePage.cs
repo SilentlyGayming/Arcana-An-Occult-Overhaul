@@ -15,6 +15,7 @@ namespace SupernaturalExpanded.Journal
         internal readonly int TierOrder;
         internal readonly float EnergyCost;
         internal readonly string Description;
+        internal readonly bool? Available;
 
         internal GrimoireEntry(string id, string name, string tierName, int tierOrder, float energyCost)
             : this(id, name, tierName, tierOrder, energyCost, null)
@@ -22,6 +23,11 @@ namespace SupernaturalExpanded.Journal
         }
 
         internal GrimoireEntry(string id, string name, string tierName, int tierOrder, float energyCost, string description)
+            : this(id, name, tierName, tierOrder, energyCost, description, null)
+        {
+        }
+
+        internal GrimoireEntry(string id, string name, string tierName, int tierOrder, float energyCost, string description, bool? available)
         {
             if (String.IsNullOrEmpty(id)) throw new ArgumentException("An entry needs a stable ID", "id");
             Id = id;
@@ -30,6 +36,7 @@ namespace SupernaturalExpanded.Journal
             TierOrder = tierOrder;
             EnergyCost = energyCost;
             Description = description ?? String.Empty;
+            Available = available;
         }
     }
 
@@ -332,7 +339,7 @@ namespace SupernaturalExpanded.Journal
             {
                 GrimoireEntry a = current[i], b = incoming[i];
                 if (b == null || a.Id != b.Id || a.Name != b.Name || a.TierName != b.TierName || a.TierOrder != b.TierOrder
-                    || !SameCost(a.EnergyCost, b.EnergyCost) || a.Description != b.Description) return false;
+                    || !SameCost(a.EnergyCost, b.EnergyCost) || a.Available != b.Available || a.Description != b.Description) return false;
             }
             return true;
         }
@@ -513,6 +520,7 @@ namespace SupernaturalExpanded.Journal
 
         private Color ColorForCost(GrimoireEntry entry)
         {
+            if (entry.Available.HasValue) return entry.Available.Value ? AffordableColor : UnaffordableColor;
             if (!hasAvailablePower || float.IsNaN(entry.EnergyCost)) return TextColor;
             return entry.EnergyCost <= availablePower + 0.005f ? AffordableColor : UnaffordableColor;
         }

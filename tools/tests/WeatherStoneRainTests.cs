@@ -84,6 +84,7 @@ namespace SupernaturalExpanded.Journal
             Check(stone.GetField("mWeatherChangedEventListener", All).FieldType == typeof(EventListener), "native listener can be replaced locally");
             Check(stone.GetField("mSummoningSimDescriptionId", All).FieldType == typeof(ulong), "native summoner identity");
             Check(stone.GetField("mSummonWeatherType", All).FieldType == typeof(WeatherStone.SummonWeatherType), "native summon identity");
+            Check(stone.GetField("mUseExtremeFailure", All).FieldType == typeof(bool), "cheat clears the native failure flag");
             Check(typeof(Buff).GetField("mInfo", All).FieldType == typeof(Buff.BuffData), "native luck data can be reused without global edits");
             MethodInfo add = typeof(BuffManager).GetMethod("AddBuff", All, null,
                 new Type[] { typeof(BuffInstance), typeof(BuffNames), typeof(int), typeof(float), typeof(bool),

@@ -20,10 +20,15 @@ TABLE_FAMILY = fnv64("Arcana.Localization.Strings") & 0x00FFFFFFFFFFFFFF
 PERK_PREFIXES = tuple(tree.text_prefix for tree in TREES)
 EXPECTED_TREES = {WITCH.source: (17, 23), GENIE.source: (15, 19)}
 NATIVE_BUFF_PREFIX = "Gameplay/Excel/buffs/BuffList:"
-NATIVE_BUFF_KEYS = ("Arcana.Witch.Fizzle.Name", "Arcana.Witch.Fizzle.Description") + tuple(
+NATIVE_BUFF_KEYS = ("Arcana.Witch.Fizzle.Name", "Arcana.Witch.Fizzle.Description",
+                    "Arcana.Genie.Exhaustion.Name", "Arcana.Genie.Exhaustion.Description",
+                    "Arcana.Ability.genie_lamp.Name", "Arcana.Ability.genie_lamp.Description") + tuple(
     "Arcana.Genie.WishBuff." + name + "." + field
-    for name in ("Beauty", "Career", "Joy", "Love", "GoneWrong") for field in ("Name", "Description"))
+    for name in ("Beauty", "Career", "Joy", "Love", "GoneWrong") + tuple(re.findall(r'new GenieMoodlet\("(\w+)"', class_text(ROOT, "GenieOutcomeBuffs"))) for field in ("Name", "Description"))
 KEY = re.compile(r"Arcana(?:\.[A-Za-z0-9_]+)+")
+BLESSINGS = ("Fortune", "Vitality", "Inspiration", "Harmony", "Protection")
+NOTICE = re.compile(r"Arcana\.Genie\.(?:Blessing\.\w+\.(?:Granted|Resisted)|HeartsDesire\.(?:Response|Fulfilled|Mistaken))")
+FIRST_RANKS = (("Witch", "Uninitiated"), ("Genie", "Dormant"), ("Fairy", "Budding"))
 TOKEN = re.compile(r"\{(0|[1-9][0-9]*|name|Name)\}")
 HEADER = struct.Struct("<4sB2xI6x")
 ENTRY = struct.Struct("<QI")
@@ -94,11 +99,31 @@ def runtime_keys():
     formatted["Arcana.Spell.IceOtherTargets"] = {"0"}
     formatted["Arcana.Spell.SunlightOtherTargets"] = {"0"}
     formatted["Arcana.Cheat.UnlockAll.Success"] = {"0", "1"}
-    formatted["Arcana.Genie.HeartsDesire.Revealed"] = {"0", "1"}
-    for key in ("HeartsDesire.Nothing", "Favor.Given", "Wish.Granted", "Wish.Failed", "Wish.Doom", "Fate.LifeForAWish", "Fate.ForgottenBonds",
-                "Rain.Summoned", "Rain.Failed"):
+    formatted["Arcana.Genie.HeartsDesire.Response"] = {"0", "1"}
+    for key in ("HeartsDesire.Fulfilled", "HeartsDesire.Mistaken", "Blessing.Protection.Resisted", "Wish.Granted", "Wish.Failed",
+                "Wish.Doom", "Rain.Summoned", "Rain.Failed"):
         formatted["Arcana.Genie." + key] = {"0"}
+    for blessing in BLESSINGS:
+        keys.update("Arcana.Genie.Blessing." + blessing + "." + part for part in ("Name", "Description", "Granted"))
+        keys.update("Arcana.Genie.HeartsDesire." + blessing + "." + str(line) for line in range(1, 5))
+        formatted["Arcana.Genie.Blessing." + blessing + ".Granted"] = {"0"}
+    for occult, rank in FIRST_RANKS:
+        keys.update(("Arcana." + occult + ".Rank.Full." + rank, "Arcana." + occult + ".Rank.Description." + rank))
     formatted["Arcana.Genie.Wishes.DeathEscaped"] = {"0"}
+    genie_buff_source = class_text(ROOT, "GenieOutcomeBuffs")
+    for name in re.findall(r'new GenieMoodlet\("(\w+)"', genie_buff_source):
+        keys.update("Arcana.Genie.WishBuff." + name + "." + part for part in ("Name", "Description"))
+    for key in keys:
+        if key.startswith(("Arcana.Genie.Wish.Failure.", "Arcana.Genie.Wish.Success.", "Arcana.Genie.Fate.")):
+            short = key.rsplit(".", 1)[1]
+            if short in ("FortunesDebt",):
+                formatted[key] = set()
+            elif key in ("Arcana.Genie.Wish.Success.Resurrect","Arcana.Genie.Wish.Success.Love",
+                         "Arcana.Genie.Wish.Success.More", "Arcana.Genie.Wish.Success.Fortune",
+                         "Arcana.Genie.Wish.Failure.Resurrect", "Arcana.Genie.Fate.ThingYouLoveMost", "Arcana.Genie.Fate.ForgottenLove"):
+                formatted[key] = {"0", "1"}
+            else:
+                formatted[key] = {"0"}
     return keys, formatted
 
 
@@ -160,7 +185,7 @@ def catalogs(directory=CATALOG_DIR):
         allowed = formatted.get(key, set())
         if key.startswith(PERK_PREFIXES) and ".Description." in key:
             allowed = {"name"}
-        elif key.startswith(("Arcana.Witch.Rank.Description.", "Arcana.Genie.Rank.Description.")):
+        elif key.startswith(("Arcana.Witch.Rank.Description.", "Arcana.Genie.Rank.Description.", "Arcana.Fairy.Rank.Description.")):
             allowed = {"Name"}
         if not placeholders <= allowed or (key in formatted and placeholders != allowed):
             raise ValueError(f"{english_path}: {key} has incompatible placeholders {sorted(placeholders)}")
@@ -229,6 +254,17 @@ def resources(directory=CATALOG_DIR):
     return tables
 
 
+def notification_keys(english):
+    prefixes = ("Arcana.Genie.Fate.", "Arcana.Genie.Wish.Success.", "Arcana.Genie.Wish.Failure.")
+    keys = {key for key in english if key.startswith(prefixes) or NOTICE.fullmatch(key)}
+    for path in (ROOT / "src").rglob("*.cs"):
+        source = path.read_text(encoding="utf-8")
+        keys.update(re.findall(r'(?:SpellKnowledge\.)?Notify\([^,]+,\s*"(' + KEY.pattern + r')"', source))
+    keys.update(key for key in ("Arcana.Genie.Wish.Failed", "Arcana.Genie.Wish.Granted", "Arcana.Genie.Rain.Summoned",
+                                "Arcana.Genie.Rain.Failed", "Arcana.Study.Discovered") if key in english)
+    return sorted(keys & english.keys())
+
+
 def generate(destination=GENERATED):
     english = catalogs()[ENGLISH]
     lines = [
@@ -237,6 +273,10 @@ def generate(destination=GENERATED):
         "{",
         "    internal static class ArcanaEnglish",
         "    {",
+        "        internal static readonly string[] NotificationKeys =",
+        "        {",
+        *["            " + json.dumps(key) + "," for key in notification_keys(english)],
+        "        };",
         "        internal static string Lookup(string key)",
         "        {",
         "            switch (key)",

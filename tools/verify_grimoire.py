@@ -557,16 +557,18 @@ def check_r57(root, root_dir, constants, counts, layout):
     assert 'Arcana.Status.Label.FaericPower' not in english() and 'Arcana.Status.Label.MagicPoints' not in english(), 'Every caster names its pool Magical Power'
     non_witch = data.split('private sealed class WitchOverview')[0]
     assert 'Novice' not in rank + non_witch, 'No rank is invented for a species without a ladder'
-    assert 'internal static bool HasLadder(OccultTypes types)' in rank and 'return primary == OccultTypes.Witch || primary == OccultTypes.Genie;' in rank
+    for occult, first in (('Witch', 'Uninitiated'), ('Genie', 'Dormant'), ('Fairy', 'Budding')):
+        assert 'case OccultTypes.%s: return "%s";' % (occult, first) in rank, 'Each supported supernatural starts at its own Rank 0'
+        assert english()['Arcana.%s.Rank.Full.%s' % (occult, first)] == '%s %s' % (first, occult)
+    assert 'if (rank.Length == 0) rank = FirstRank(primary);' in rank and 'OccultRankLabel.FirstRankDescription(context.Primary, identity.FirstName)' in data
     assert 'GenieRanks.TryRead(identity.Description, out genieRank)' in rank, 'Genie ranks come from Genie Magic'
     assert 'return "";' in rank.split('internal static string Rank(')[1].split('internal static string For(')[0], 'Unknown or unsupported progression gives no rank'
     assert 'string lifeState = LifeStateNames.For(primary);' in rank
     assert 'return rank.Length == 0 ? lifeState : JournalText.Format("Arcana.Common.WithQualifier", lifeState, rank);' in rank
     check_text(rank, 'Arcana.Common.WithQualifier', '{0} ({1})')
     assert 'data.RankTitle = JournalText.Get("Arcana.Journal.Overview.Rank.Unranked");' in data
-    assert 'data.RankTitle = JournalText.Get("Arcana.Journal.Overview.Rank.Unavailable");' in data
+    assert 'Arcana.Journal.Overview.Rank.Unavailable' not in data and 'Arcana.Journal.Overview.Rank.Unavailable' not in english(), 'Rank 0 replaced the unavailable rank'
     check_text(data, 'Arcana.Journal.Overview.Rank.Unranked', 'Rank: Unranked')
-    check_text(data, 'Arcana.Journal.Overview.Rank.Unavailable', 'Rank: Unavailable')
     assert data.index('data.RankLevel = 1;') < data.index('"Arcana.Journal.Overview.Rank.Unranked"'), 'Only a real rank sets a numeral'
     check_text(data, 'Arcana.Journal.Overview.Rank.Unimplemented', 'This life state has no ranks.')
     tree = cs_source.file_code(root_dir, 'OccultTree')
@@ -1419,7 +1421,7 @@ def check_attributes(root_dir, data):
     window = cs_source.class_code(root_dir, 'JournalWindow')
     assert 'model.SimBuffsChanged += OnBuffsChanged;' in window and 'model.SimBuffsChanged -= OnBuffsChanged;' in window
     assert 'RefreshOverview();' in window.split('private void OnBuffsChanged(')[1].split('private void OnMagicMotiveChanged')[0]
-    assert '20% slower' in english()['Arcana.Witch.Fizzle.Description']
+    assert 'Magical Power will be slow to recover' in english()['Arcana.Witch.Fizzle.Description']
     for key, text in (('Attributes.Accuracy', 'Spell Accuracy'),
                       ('Accuracy.Tagline', 'Determines the chance that your Sim’s magic succeeds.')):
         check_text(accuracy, 'Arcana.Journal.Overview.' + key, text)
@@ -1517,7 +1519,7 @@ def check_overview_hover(root, root_dir, jl, data, page):
             assert all(re.match(r'^[+-]\d', line) for line in text.splitlines())
             check_text(rank_copy, key, english()[key])
     genie_unlocks = [
-        '100 Maximum Magical Power\nUnlocks Clean Sim',
+        '100 Maximum Magical Power\nUnlocks Magically Clean',
         '+50 Maximum Magical Power\n+2% Spell Accuracy\nUnlocks Summon Food',
         '+50 Maximum Magical Power\n+2% Spell Accuracy\n+25% Spell Learning Speed\nUnlocks Enchant Home\nUnlocks Banish Sim',
         '+50 Maximum Magical Power\n+2% Spell Accuracy\nUnlocks Ensorcel Sim\nUnlocks Release Sim',
@@ -1811,7 +1813,7 @@ def check_r72(root, root_dir, layout):
     assert 'FaceShade' not in theme and 'StockFace' not in page, 'The whole-tile tint is gone'
     set_icon = page.split('private void SetPerkFaded(')[1].split('private static Color GetFadedColor(')[0]
     assert 'Face' not in set_icon and 'icons[index].ShadeColor = fade ? FadedIcon : LitIcon;' in set_icon, 'The icon shade never involves the specialization colour'
-    assert 'Edge = 9' in cs_source.class_code(root_dir, 'PageControl') or 'Edge = 9' in (root_dir / 'src' / 'Occults' / 'OccultPerks.cs').read_text()
+    assert 'Edge = 9' in cs_source.class_code(root_dir, 'PageControl') or 'Edge = 9' in (root_dir / 'src' / 'Shared' / 'Progression' / 'OccultPerks.cs').read_text()
     size, px = generated_rgba(ui_resources.tile_edge_png())
     d = ui_resources.TILE_EDGE_DENSITY
     assert size == (ui_resources.TILE_EDGE_WIDTH * d, ui_resources.TILE_EDGE_HEIGHT * d)
@@ -1862,7 +1864,7 @@ def check_genie_tree(root, root_dir):
     assert shared == 6 and unbound == 34 and lampbound == 34, 'Both paths must spend exactly 40 points including shared upgrades'
     assert all(costs[name] == [8] for name in ('Unleashed', 'Counterattack', 'GenieLaw', 'LawOfTheLamp')), 'All Rank V Genie perks cost eight'
     grimoire = cs_source.class_code(root_dir, 'InnateAbilities')
-    assert 'entries.Add(Entry(GenieLampRow, 0f, 0));' in grimoire, 'Return to Lamp displays numeric 0 in the Grimoire'
+    assert 'entries.Add(Entry(GenieLampRow, 0f, 2));' in grimoire, 'Return to Lamp displays numeric 0 in the Grimoire'
     english_text = english()
     assert not any('ULTIMATE' in text.upper() for key, text in english_text.items() if key.startswith('Arcana.Genie.Perk.')), 'No ultimate banner text'
     assert english_text['Arcana.Genie.Path.Power'] == 'Path of the Unbound' and english_text['Arcana.Genie.Path.Genie'] == 'Path of the Lampbound'
@@ -1874,7 +1876,7 @@ def check_genie_tree(root, root_dir):
     for i in range(48):
         assert control(root, GENIE.id(10, i)).find("prop[@name='WindowFlags']").get('value') == '0x00002012'
     for i in range(2): control(root, GENIE.id(11, i))
-    assert not (root_dir / 'src/Occults/OccultPerks.cs').read_text(encoding='utf-8').count('Pending'), 'Perk.Pending was removed'
+    assert not (root_dir / 'src/Shared/Progression/OccultPerks.cs').read_text(encoding='utf-8').count('Pending'), 'Perk.Pending was removed'
     selection = cs_source.class_code(root_dir, 'PowerSelection')
     ledger = cs_source.class_code(root_dir, 'PerkLedger')
     assert 'perk.Requires' in ledger, 'The ledger refuses what the page refuses'
@@ -1908,7 +1910,7 @@ def check_perk_navigation(root_dir, window):
     assert 'endID == OkayID ? PerkPurchaseChoice.Yes' in prompt and 'endID == CancelID ? PerkPurchaseChoice.No' in prompt
     assert 'OnTriggerCancel()' in prompt and 'EndDialog(DismissID);' in prompt and 'base.EndDialog(endID);' in prompt
     check_text(prompt, 'Arcana.Journal.Perks.Confirmation.Message',
-               'Would you like to confirm your selected perks before leaving? Selecting No will discard your pending purchases.')
+               'Would you like to confirm your selected perks before leaving? Choosing No will discard any pending purchases.')
     check_text(prompt, 'Arcana.Common.Yes', 'Yes')
     check_text(prompt, 'Arcana.Common.No', 'No')
     print('PASS: native tab-purchase dialog wiring, one pending destination, commit/discard/dismiss branches and staged batch commit')
@@ -2006,7 +2008,7 @@ def check_innate_casters(root_dir):
     genie_code = cs_source.file_code(root_dir, 'GeniePower')
     assert 'get { return CasterProfile.Genie.Capacity(CastingRules.RankForSkill(SkillLevel)) * GeniePerks.CapacityFactor(SkillOwner); }' in genie_code
     assert 'private float power = float.NaN;' in genie_code and 'set { power = Math.Max(0f, Math.Min(Capacity, value)); }' in genie_code, 'Genie power is absolute and capped by rank'
-    assert 'skill.Power += RegenerationPerHour * Recovery(sim).Rate * minutes / 60f;' in genie_code and 'HasElement(WitchMagicRecovery.FizzleBuff)' in genie_code
+    assert 'skill.ChangePower(RegenerationPerHour * Recovery(sim).Rate * minutes / 60f);' in genie_code and 'HasElement(WitchMagicRecovery.FizzleBuff)' in genie_code
     assert 'NativeCurrent.SetValue(points, NativeMaximum.GetValue(points));' in genie_code, 'The native Genie magic points never block Arcana abilities'
     resolve = casters.split('internal static bool ResolveBacklash(')[1].split('private static float Fraction(')[0]
     roll = casters.split('private static bool RollBacklash(')[1].split('private static float Fraction(')[0]
@@ -2103,29 +2105,28 @@ def check_innate_casters(root_dir):
     assert 'JournalText.Get("Arcana.Journal.Overview.Accuracy.InnatePower")' in attributes
     assert english()['Arcana.Journal.Overview.Accuracy.InnatePower'] == 'Innate Power'
     abilities = cs_source.file_code(root_dir, 'InnateAbilities')
-    assert abilities.count('"Arcana.Ability.fairy_') == 10 and abilities.count('"Arcana.Ability.genie_') == 10 and 'float.NaN' in abilities
+    assert abilities.count('"Arcana.Ability.fairy_') == 10 and abilities.count('"Arcana.Ability.genie_') == 2 and 'float.NaN' in abilities
     assert 'if (rules.Rank < ability.Rank || ability.Id == "genie_release") continue;' in abilities and 'ability.CostFor(rules)' in abilities, 'Genie abilities show once unlocked, with their costs'
-    for perk_rule in ('rules.Lampbound && GeniePerks.Owns(actor.SimDescription, "PocketPalace")', 'GeniePerks.Owns(actor.SimDescription, "HeartsDesire")',
-                      'if (rules.GenieLaw && rules.Rank >= Rank.HighWitch)', 'if (rules.Counterattack)'):
+    assert '"genie_blessing_" + name.ToLowerInvariant()' in abilities and 'BlessingRules.CostFor(rules)' in abilities, 'Each blessing is a Grimoire ability with its real cost'
+    for perk_rule in ('LampRetreat.Unlocked(actor, rules)', 'GeniePerks.Owns(actor.SimDescription, "HeartsDesire") && rules.Lampbound',
+                      'if (rules.Rank < Rank.HighWitch || (!rules.GenieLaw && !rules.Counterattack)) return;'):
         assert perk_rule in abilities, 'Perk abilities appear only once their perk is bought: ' + perk_rule
-    assert 'GenieUncosted' not in abilities and 'foreach (WishDefinition wish in WishCatalog.All)' in abilities, 'Unlocked wishes come from the shared catalog'
+    assert 'GenieUncosted' not in abilities and 'foreach (WishDefinition wish in WishCatalog.All)' not in abilities, 'Unlocked wishes come from the shared catalog'
     wishes = cs_source.file_code(root_dir, 'GenieWishes')
-    verbs = cs_source.file_code(root_dir, 'HeartsDesire')
+    verbs = cs_source.file_code(root_dir, 'GenieBlessings')
     gates = cs_source.file_code(root_dir, 'SpellKnowledgeGates')
     labels = english()
     assert 'new Definition(WishMode.Other), new Definition(WishMode.Own)' in wishes
-    assert 'new Definition(wish.Kind, WishMode.Guaranteed)' not in wishes, 'No separate guaranteed-wish interaction'
-    assert 'WishRules.GuaranteeAvailable(' in wishes, 'First eligible grant automatically uses guarantee'
-    assert 'if (guaranteed) skill.GuaranteeReady = WishState.After(24f);' in wishes, 'Daily guarantee is consumed on use'
-    assert wishes.index('if (!applied)') < wishes.index('skill.GuaranteeReady ='), 'Failed execution cannot consume guarantee'
-    assert 'mode == WishMode.Own || guaranteed || RandomUtil.RandomChance(accuracy)' in wishes, 'Guaranteed grant bypasses failure roll'
+    assert 'WishRules.ResolveMode(' in wishes and 'if (mode == WishMode.Guaranteed)' in wishes
+    assert 'skill.GuaranteeReady = WishState.After(WishRules.GuaranteeHours);' in wishes
+    assert 'WishRules.RequiredSuccess(mode)' in wishes and 'if (mode == WishMode.Other)' in wishes
     assert 'return new[] { GenieMenu.Root(female) };' in wishes, 'Both wish variants live under Genie submenu'
-    assert 'new[] { GenieMenu.Root(female), JournalText.Get("Arcana.Genie.Favor.Menu") }' in verbs, 'Favor variants live under Genie submenu'
+    assert 'new[] { GenieMenu.Root(female), JournalText.Get("Arcana.Genie.Blessing.Menu") }' in verbs, 'Blessings live under the Genie submenu'
     assert 'return new[] { GenieMenu.Root(female) };' in verbs, "Ask About Their Heart's Desire lives under Genie submenu"
-    for s in ('Grant Wish...', 'Grant Genie Favor...', 'Genie...', 'Grant Your Own Wish...'):
+    for s in ('Grant Wish', 'Grant Blessing...', 'Genie...', 'Grant Your Own Wish'):
         assert s in labels.values(), 'Missing submenu label: ' + s
-    assert 'GuaranteedRow' not in abilities and 'genie_wish_guaranteed' not in abilities, 'No duplicate guaranteed wish in the Grimoire'
-    assert 'GenieWishMenu.Install(sim);' in gates and 'foreach (InteractionDefinition favor in GeniesFavor.Singletons)' in gates, 'Existing interaction registration preserved'
+    assert 'genie_wish_guaranteed' not in abilities and 'genie_retreat' not in abilities and 'genie_hearts_desire' not in abilities and 'genie_ask_desire' not in abilities, 'Obsolete Genie rows removed at the provider; Ask About Their Heart\'s Desire is a social, not a Grimoire ability'
+    assert 'GenieWishMenu.Install(sim);' in gates and 'foreach (InteractionDefinition blessing in GenieBlessing.Singletons)' in gates, 'Existing interaction registration preserved'
     genie_abilities = cs_source.file_code(root_dir, 'GenieAbilities')
     for row, rank in (('"genie_clean_sim", "CleanSim", Rank.Novice', 1), ('"genie_meal", "SummonFood", Rank.Apprentice', 2),
                       ('"genie_enchant_home", "EnchantHouse", Rank.Adept', 3), ('"genie_banish", "RemoveSim", Rank.Adept', 3),

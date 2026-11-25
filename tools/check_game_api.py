@@ -410,6 +410,115 @@ def require_station_contract(objects_types):
             raise ValueError("Sims3GameplayObjects.dll is missing " + owner + "." + ", ".join(sorted(missing)))
 
 
+def require_blessing_contract(root_dir):
+    from il_reader import Module
+    module = Module(str(root_dir / ".deps" / "Sims3" / "Sims3GameplaySystems.dll"))
+    names = {name: index for index, name in module.typedefs().items()}
+    social = "Sims3.Gameplay.Socializing."
+    bindings = [
+        (social + "SocialInteraction", "BeginSocialInteraction", ""),
+        (social + "SocialInteractionB/Definition", ".ctor", ""),
+        (social + "SocialRuleRHS", "Get", ""),
+        (social + "SocialRuleRHSBase", "get_AnimX get_AnimY get_STEffectCommodity get_UseGenericPetReject get_JazzState "
+         "get_EndStanceX get_EndStanceY", ""),
+        (social + "ActionData", "Get GetJazzGraph", ""),
+        (social + "ActionDataBase", "get_StartStanceX get_StartStanceY get_ProductVersion", ""),
+        (social + "SocialComponent", "GoToStance SetStance get_Stance", ""),
+        (social + "SocialRuleRHS", "get_ProceduralEffectBeforeUpdate", "mProceduralEffectBeforeUpdate sDictionary"),
+        (social + "SocialRuleRHS/ProceduralEffectDelegate", "Invoke", ""),
+        (social + "SocialCallback", "DecideWinnerOfFight DecideWinnerOfFightGeneral", ""),
+        (social + "SocialInteractionA", "", "ActorWinsFight"),
+        (social + "Conversation", "get_AthleticSkillFightModifier get_TraitSimFightModifier", ""),
+        ("Sims3.Gameplay.Services.Police", "get_PoliceFightModifier", ""),
+        ("Sims3.Gameplay.Skills.Athletic", "IsBodyBuilder", ""),
+        ("Sims3.Gameplay.Skills.Writing", "", "CurrentWriting"),
+        ("Sims3.Gameplay.Objects.WrittenBookData", "", "PercentComplete HasReceivedAdviceFromBoss"),
+        ("Sims3.Gameplay.ActorSystems.ReactionTypes", "", "Shrug"),
+        ("Sims3.Gameplay.ActorSystems.ReactionSpeed", "", "AfterInteraction"),
+        ("Sims3.Gameplay.Actors.Sim", "PlayReaction HasTrait get_CurrentInteraction", ""),
+        (social + "CommodityTypes", "", "Friendly"),
+        (social + "LongTermRelationship", "SetLiking get_Liking get_LastChange get_CurrentLTR RemoveInteractionBit UpdateHauntedSimGhostRelationship",
+         "mHighestLiking"),
+        (social + "LongTermRelationship/InteractionBits", "", "MakeEnemy"),
+        (social + "SocialRuleRHS", "get_ProceduralEffectAfterUpdate", "mProceduralEffectAfterUpdate"),
+        (social + "SocialRule", "", "LHS RHS"),
+        (social + "SocialRuleLHSBase", "get_LTROverride", ""),
+        (social + "SocialInteractionA", "get_TargetEffect CallProceduralEffectAfterUpdate", ""),
+        (social + "Relationship", "Get get_LTR", "SimDescriptionA SimDescriptionB"),
+        ("Sims3.Gameplay.EventSystem.Event", "get_Actor get_TargetObject", ""),
+        ("Sims3.Gameplay.Skills.PaintingSkill", "PickPainting PickPaintingQuality GetNumPaintingsPaintedPerSize", ""),
+        ("Sims3.Gameplay.Skills.PaintingSkill/PaintingQuality", "", "Brilliant Masterpiece"),
+        ("Sims3.Gameplay.Core.RandomUtil", "GetFloat RandomChance", ""),
+        ("Sims3.Gameplay.Core.Lot", "GetObjects", ""),
+        (social + "SocialManager/SocialEffectiveness", "", "Social Romance"),
+        ("Sims3.Gameplay.Interactions.InteractionInstance",
+         "SafeToSync StandardEntry StandardExit BeginCommodityUpdates EndCommodityUpdates EnterStateMachine SetParameter "
+         "AnimateJoinSims FinishLinkedInteraction WaitForSyncComplete", ""),
+        ("Sims3.Gameplay.Interactions.InteractionPriority", ".ctor", ""),
+        ("Sims3.Gameplay.ActorSystems.InteractionQueue", "AddNext HasInteractionOfType", ""),
+        ("Sims3.Gameplay.Careers.GotPaidEvent", "get_Amount get_TypeOfPay", ""),
+        ("Sims3.Gameplay.Careers.GotPaidEvent/PayType", "", "kCareerRetirementPay kCareerVacationPay"),
+        ("Sims3.Gameplay.EventSystem.HasGuidEvent`1", "get_HasGuidObject", ""),
+        ("Sims3.Gameplay.EventSystem.EventTypeId", "", "kGotPaid kGotBuff kStartedPainting kSocialInteraction"),
+        ("Sims3.Gameplay.ActorSystems.BuffInstance", "get_Guid get_EffectValue get_BuffOrigin", ""),
+        ("Sims3.Gameplay.ActorSystems.Origin", "",
+         "FromSocialization FromFight FromFightInPublic FromLosingFight FromRejectedWooHooOffHome FromBeingRejectedAsClient "
+         "FromSociallyAwkwardTrait FromBartenderArgueGnubb FromSpell FromPestilenceCurse FromGhostHaunting FromSpellcastingDuel "
+         "FromFairy FromFailedFairyTrap FromGenie"),
+        ("Sims3.Gameplay.ActorSystems.BuffNames", "",
+         "FeelingLucky FeelingUnlucky Sore LuckyLime Energized Inspired AmongFriends NewFriend Shielded PromiseToProtect CalmedDown Awkward "
+         "OddlyPowerful"),
+        ("Sims3.Gameplay.Skills.SkillManager", "ChangeSkillGainModifier", "mOverallModifier"),
+        ("Sims3.Gameplay.Skills.SkillNames", "", "Athletic MartialArts Writing Painting"),
+        ("Sims3.Gameplay.Autonomy.CommodityKind", "", "Fatigue Hunger Bladder Energy Social Fun Hygiene"),
+        ("Sims3.Gameplay.Autonomy.Motive", "", "Tuning"),
+        ("Sims3.Gameplay.CAS.SimDescription", "get_TeenOrAbove get_YoungAdultOrAbove get_IsBonehilda get_IsMatureMermaid", ""),
+        ("Sims3.Gameplay.DreamsAndPromises.ActiveDreamNode", "get_IsPromised get_IsComplete", ""),
+        ("Sims3.Gameplay.ActorSystems.TraitNames", "",
+         "Frugal Kleptomaniac Mooch Ambitious Snob Workaholic Athletic CouchPotato Daredevil Excitable PartyAnimal Artistic Virtuoso "
+         "Genius Perfectionist NaturalCook Handy ComputerWhiz Disciplined Friendly Flirty HopelessRomantic Loner Shy SociallyAwkward "
+         "Charismatic GoodSenseOfHumor Coward Unlucky Clumsy Neurotic Hydrophobic Loser Brave Evil MeanSpirited CanApprehendBurglar"),
+    ]
+    require_members(module, names, bindings, "Sims3GameplaySystems.dll")
+    objects = Module(str(root_dir / ".deps" / "Sims3" / "Sims3GameplayObjects.dll"))
+    require_members(objects, {name: index for index, name in objects.typedefs().items()}, [
+        ("Sims3.Gameplay.Objects.HobbiesSkills.Easel", "", "mPaintTimeSpent"),
+        ("Sims3.Gameplay.Objects.HobbiesSkills.Easel/Paint", "Run", ""),
+        ("Sims3.Gameplay.Objects.Electronics.Computer/WriteNovel", "Run", ""),
+        ("Sims3.Gameplay.Objects.HobbiesSkills.ImageObject", "CalculateInitialValue UpdatePaintingStage",
+         "mPictureKey mQuality mPaintingStage PainterSimId"),
+        ("Sims3.Gameplay.Objects.HobbiesSkills.EaselCanvas", "get_Size", ""),
+        ("Sims3.Gameplay.Objects.CookingObjects.CookingProcess", "get_PreparerId", "BornToCookEnhanced"),
+        ("Sims3.Gameplay.Interfaces.IPartOfCookingProcess", "get_CookingProcess", ""),
+    ], "Sims3GameplayObjects.dll")
+    object_names = {name: index for index, name in objects.typedefs().items()}
+    definition = object_names.get("Sims3.Gameplay.Objects.HobbiesSkills.Easel/Paint/Definition")
+    if definition is None or "Level" not in {name for _, name in objects.fields_of(definition)}:
+        raise ValueError("Sims3GameplayObjects.dll is missing Easel.Paint.Definition.Level")
+    iface = Module(str(root_dir / ".deps" / "Sims3" / "SimIFace.dll"))
+    require_members(iface, {name: index for index, name in iface.typedefs().items()}, [
+        ("Sims3.SimIFace.StateMachineClient", "Acquire SetProductVersion SetActor SetParameter EnterState RequestState Dispose", ""),
+        ("Sims3.SimIFace.Simulator", "get_CurrentTask Sleep", ""),
+        ("Sims3.SimIFace.World", "SetIsPaintingTextureInUse", ""),
+        ("Sims3.SimIFace.StateMachineClient", "Acquire SetActor EnterState SetParameter RequestState Dispose", ""),
+        ("Sims3.SimIFace.AnimationPriority", "", "kAPDefault"),
+        ("Sims3.SimIFace.Enums.GenieWishTypes", "", "Happiness"),
+    ], "SimIFace.dll")
+
+
+def require_members(module, names, bindings, assembly):
+    for owner, methods, fields in bindings:
+        index = names.get(owner)
+        if index is None:
+            raise ValueError(assembly + " is missing " + owner)
+        found = {name for _, name in module.methods_of(index)} | {name for _, name in module.fields_of(index)}
+        missing = set((methods + " " + fields).split()) - found
+        if missing:
+            raise ValueError(assembly + " is missing " + owner + "." + ", ".join(sorted(missing)))
+        visibility = module.row(2, index)[0] & 7
+        if visibility not in (PUBLIC, NESTED_PUBLIC):
+            raise ValueError(owner + " is not public")
+
 def check(root_dir):
     found = load(root_dir)
     if len(found) != len(ASSEMBLIES):
@@ -418,6 +527,7 @@ def check(root_dir):
     require_ui_contract(found["UI"])
     require_genie_contract(found["Sims3GameplaySystems"])
     require_witch_contract(found["Sims3GameplaySystems"])
+    require_blessing_contract(root_dir)
     require_native_cost_contract(root_dir)
     for qualified, names in MEMBERS:
         entry = find(found, qualified)

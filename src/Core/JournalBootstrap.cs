@@ -8,7 +8,7 @@ using Sims3.UI;
 [assembly: Tunable]
 [assembly: PersistableStatic]
 [assembly: AssemblyVersion("0.9.0.0")]
-[assembly: AssemblyFileVersion("0.9.3.2")]
+[assembly: AssemblyFileVersion("0.9.4.5")]
 
 namespace SupernaturalExpanded.Journal
 {
@@ -143,6 +143,8 @@ namespace SupernaturalExpanded.Journal
             worldReady = false;
             generation++;
             ArcanaCheats.Stop();
+            LampRetreat.ReleaseAll();
+            WishAging.Clear();
             WishState.Stop();
             WitchCastingLifecycle.Stop();
             SpellStudyStations.Stop();
@@ -298,7 +300,7 @@ namespace SupernaturalExpanded.Journal
                 + Escape(error.ToString()) + "</Exception>");
         }
 
-        private static void WriteLog(string payload)
+        private static bool WriteLog(string payload)
         {
             try
             {
@@ -306,12 +308,14 @@ namespace SupernaturalExpanded.Journal
                 Simulator.CreateScriptErrorFile(ref handle);
                 if (handle == 0)
                 {
-                    return;
+                    return false;
                 }
                 try
                 {
                     string xml = "<SupernaturalJournal>" + payload + "</SupernaturalJournal>";
-                    Simulator.AppendToScriptErrorFile(handle, xml.ToCharArray());
+                    char[] buffer = new char[xml.Length + 1];
+                    xml.CopyTo(0, buffer, 0, xml.Length);
+                    return Simulator.AppendToScriptErrorFile(handle, buffer);
                 }
                 finally
                 {
@@ -320,6 +324,7 @@ namespace SupernaturalExpanded.Journal
             }
             catch (Exception)
             {
+                return false;
             }
         }
 
